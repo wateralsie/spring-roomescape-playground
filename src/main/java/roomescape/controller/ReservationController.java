@@ -2,24 +2,19 @@ package roomescape.controller;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.*;
 import roomescape.model.Reservation;
-import java.time.LocalDate;
-import java.time.LocalTime;
+
+import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Controller
 public class ReservationController {
 
-    private List<Reservation> reservations = new ArrayList<>(
-            Arrays.asList(
-                    new Reservation(1, "배수민", LocalDate.now().toString(), LocalTime.now().toString()),
-                    new Reservation(2, "배수민", LocalDate.now().toString(), LocalTime.now().toString()),
-                    new Reservation(3, "배수민", LocalDate.now().toString(), LocalTime.now().toString())
-            )
-    );
+    private List<Reservation> reservations = new ArrayList<>();
+    private AtomicLong index = new AtomicLong(1);
 
     @GetMapping("/reservation")
     public String reservation() {
@@ -29,6 +24,24 @@ public class ReservationController {
     @GetMapping("/reservations")
     public ResponseEntity<List<Reservation>> getReservations() {
         return ResponseEntity.ok().body(reservations);
+    }
+
+    @PostMapping("/reservations")
+    public ResponseEntity<Reservation> postReservation(@RequestBody Reservation reservation) {
+        Reservation newReservation = new Reservation(index.getAndIncrement(), reservation.getName(), reservation.getDate(), reservation.getTime());
+        reservations.add(newReservation);
+        return ResponseEntity.created(URI.create("/reservations/" + newReservation.getId())).body(newReservation);
+    }
+
+    @DeleteMapping("/reservations/{id}")
+    public ResponseEntity<Void> deleteReservation(@PathVariable Long id) {
+        Reservation toBeDeleted = reservations.stream()
+                .filter(it -> it.getId().equals(id))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("No reservation found"));
+
+        reservations.remove(toBeDeleted);
+        return ResponseEntity.noContent().build();
     }
 
 }
